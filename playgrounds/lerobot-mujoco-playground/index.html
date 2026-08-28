@@ -61,7 +61,8 @@
     input[type="range"]{width:100%;accent-color:var(--orange)}
     .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto}
     .btn{border:0;border-radius:9px;padding:11px 13px;font-weight:650;font-size:12px;background:#e8efed;color:#162126;transition:.16s ease}
-    .btn:hover{filter:brightness(1.05)}.btn.primary{background:var(--orange);color:white}.btn.secondary{background:#2a3b41;color:#e9f0ef;border:1px solid #3a4d53}.btn.wide{grid-column:1/-1}
+    .btn:hover{filter:brightness(1.05)}.btn:disabled{cursor:not-allowed;opacity:.42;filter:none}.btn.primary{background:var(--orange);color:white}.btn.secondary{background:#2a3b41;color:#e9f0ef;border:1px solid #3a4d53}.btn.wide{grid-column:1/-1}
+    .coach{border-top:1px solid #314148;background:#18292f;padding:12px 18px;display:flex;gap:10px;align-items:flex-start;font:11px/1.45 "IBM Plex Mono",monospace;color:#b3c3c7}.coach b{color:#fff;white-space:nowrap}.coach.success{background:#173129}.coach.success b{color:#bfe4d1}
     .dataset-strip{border-top:1px solid #314148;background:#111d21;padding:13px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px;font:11px "IBM Plex Mono",monospace;color:#92a6ad}
     .frames{display:flex;gap:4px;min-width:80px;flex:1;max-width:520px}.frame{height:20px;width:8px;border-radius:2px;background:#26383e}.frame.hot{background:var(--orange)}
     .lesson-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.48fr);gap:24px;margin-top:32px}
@@ -109,14 +110,14 @@
 
     <section class="intro" id="play">
       <h1>Make the robot move.<br>Then inspect why.</h1>
-      <p><strong>LeRobot organizes the learning loop. MuJoCo supplies the physics.</strong> This first exercise makes their boundary tangible before we introduce a full model, camera observations, or training.</p>
+      <p><strong>LeRobot organizes the learning loop; MuJoCo supplies physics in a real stack.</strong> This browser exercise is a smaller kinematic sketch: use it to understand observations, actions, episodes, and policies before running the actual tools locally.</p>
     </section>
 
     <section class="workspace" aria-label="Interactive robot arm learning scene">
       <div class="workspace-bar">
         <div class="window-dots"><i></i><i></i><i></i></div>
         <div class="workspace-title">scene / tabletop_reach</div>
-        <div class="workspace-title">100 Hz model step</div>
+        <div class="workspace-title">illustrative · no physics</div>
       </div>
       <div class="workspace-main">
         <div class="stage">
@@ -126,10 +127,10 @@
         <div class="telemetry">
           <div class="telemetry-head"><h3>Observation</h3><span class="sim-state">STATE <b id="stateLabel">READY</b></span></div>
           <div class="metrics">
-            <div class="metric"><span>END EFFECTOR</span><b id="eeMetric">0.42, 0.18 m</b></div>
-            <div class="metric"><span>TARGET ERROR</span><b id="errorMetric">0.18 m</b></div>
-            <div class="metric"><span>STEP</span><b id="stepMetric">0000</b></div>
-            <div class="metric"><span>REWARD</span><b id="rewardMetric">−0.180</b></div>
+            <div class="metric"><span>END EFFECTOR (X, Y)</span><b id="eeMetric">0.42, 0.18</b></div>
+            <div class="metric"><span>TARGET ERROR</span><b id="errorMetric">0.18</b></div>
+            <div class="metric"><span>ACTION STEP</span><b id="stepMetric">0000</b></div>
+            <div class="metric"><span>REWARD = −ERROR</span><b id="rewardMetric">−0.180</b></div>
           </div>
           <label class="control"><span class="control-top"><span>SHOULDER / q₀</span><output id="q0Out">−24°</output></span><input id="q0" aria-label="Shoulder joint" type="range" min="-85" max="80" value="-24"></label>
           <label class="control"><span class="control-top"><span>ELBOW / q₁</span><output id="q1Out">72°</output></span><input id="q1" aria-label="Elbow joint" type="range" min="-130" max="130" value="72"></label>
@@ -142,10 +143,11 @@
           </div>
         </div>
       </div>
+      <div class="coach" id="coach" role="status" aria-live="polite"><b>TRY THIS</b><span id="coachText">Drag the orange target. The observation changes even before the robot acts.</span></div>
       <div class="dataset-strip">
         <span>EPISODE BUFFER · <b id="frameCount">0 frames</b></span>
         <div class="frames" id="frames" aria-hidden="true"></div>
-        <span id="bufferStatus">waiting for actions</span>
+        <span id="bufferStatus">empty · press Record demo</span>
       </div>
     </section>
 
@@ -154,15 +156,15 @@
         <h2>The loop, without the fog</h2>
         <p class="lead">This playground uses a five-part abstraction for the learning loop.</p>
         <div class="loop">
-          <div class="loop-step"><b>Observe</b><span>q, camera</span></div>
+          <div class="loop-step"><b>Observe</b><span>joints + target</span></div>
           <div class="loop-step"><b>Policy</b><span>π(o) → a</span></div>
           <div class="loop-step active"><b>Act</b><span>joint target</span></div>
-          <div class="loop-step"><b>Step</b><span>physics Δt</span></div>
+          <div class="loop-step"><b>Update</b><span>kinematic state</span></div>
           <div class="loop-step"><b>Record</b><span>o, a, r</span></div>
         </div>
         <div class="truth">
           <div class="truth-icon">i</div>
-          <div><h3>Illustrative kinematic model — not MuJoCo.</h3></div>
+          <div><h3>Illustrative kinematic model — not MuJoCo.</h3><p>There is no mass, gravity, collision, contact, actuator lag, or camera rendering here. Coordinates and error are normalized display units. “Policy” is closed-form inverse kinematics, not a trained neural network.</p></div>
         </div>
       </section>
       <section class="section">
@@ -226,7 +228,7 @@ python -c "import mujoco; print(mujoco.__version__)"</pre>
     </section>
 
     <section class="next">
-      <div><h2>Next build: the real MuJoCo reach environment</h2><p>We should implement the MJCF scene, connect it to a Gym-style environment, record a LeRobot-format episode, and add a reproducible evaluation—not jump to a neural policy yet.</p></div>
+      <div><h2>Local exercise: rebuild this reach task in MuJoCo</h2><p>Implement the MJCF scene, connect it to a Gym-style environment, record one LeRobot-format episode, then evaluate 20 target positions. That turns each browser concept into a real toolchain step.</p></div>
       <a href="https://github.com/huggingface/lerobot" target="_blank" rel="noopener noreferrer">Open LeRobot source ↗</a>
     </section>
   </main>
@@ -242,6 +244,7 @@ python -c "import mujoco; print(mujoco.__version__)"</pre>
   const eeMetric = document.getElementById('eeMetric'), errorMetric = document.getElementById('errorMetric'), rewardMetric = document.getElementById('rewardMetric'), stepMetric = document.getElementById('stepMetric');
   const stateLabel = document.getElementById('stateLabel'), recordBtn = document.getElementById('recordBtn'), replayBtn = document.getElementById('replayBtn'), policyBtn = document.getElementById('policyBtn');
   const frameCount = document.getElementById('frameCount'), framesEl = document.getElementById('frames'), bufferStatus = document.getElementById('bufferStatus');
+  const coach = document.getElementById('coach'), coachText = document.getElementById('coachText');
   let W=0,H=0,dpr=1,step=0,recording=false,episode=[],anim=null,dragging=false,lastCapture=0;
   let target={x:.56,y:.12};
   const deg=x=>x*Math.PI/180;
@@ -249,7 +252,7 @@ python -c "import mujoco; print(mujoco.__version__)"</pre>
   function kin(a0=+q0.value,a1=+q1.value){const base={x:W*.28,y:H*.68}, L1=Math.min(W*.27,155),L2=Math.min(W*.24,136);const t0=deg(a0),t1=deg(a0+a1);const p1={x:base.x+Math.cos(t0)*L1,y:base.y+Math.sin(t0)*L1};const p2={x:p1.x+Math.cos(t1)*L2,y:p1.y+Math.sin(t1)*L2};return{base,p1,p2,L1,L2}}
   function targetPx(){return{x:W*(.14+target.x),y:H*(.68-target.y)}}
   function worldEE(){const k=kin();return{x:(k.p2.x-W*.14)/W,y:(H*.68-k.p2.y)/H}}
-  function stats(){const ee=worldEE(),dx=ee.x-target.x,dy=ee.y-target.y,e=Math.hypot(dx,dy);q0Out.value=`${+q0.value<0?'−':''}${Math.abs(+q0.value)}°`;q1Out.value=`${+q1.value<0?'−':''}${Math.abs(+q1.value)}°`;q2Out.value=`${q2.value}%`;eeMetric.textContent=`${ee.x.toFixed(2)}, ${ee.y.toFixed(2)} m`;errorMetric.textContent=`${e.toFixed(3)} m`;rewardMetric.textContent=`${e===0?'0.000':'−'+e.toFixed(3)}`;stepMetric.textContent=String(step).padStart(4,'0')}
+  function stats(){const ee=worldEE(),dx=ee.x-target.x,dy=ee.y-target.y,e=Math.hypot(dx,dy);q0Out.value=`${+q0.value<0?'−':''}${Math.abs(+q0.value)}°`;q1Out.value=`${+q1.value<0?'−':''}${Math.abs(+q1.value)}°`;q2Out.value=`${q2.value}%`;eeMetric.textContent=`${ee.x.toFixed(2)}, ${ee.y.toFixed(2)}`;errorMetric.textContent=e.toFixed(3);rewardMetric.textContent=`${e<.0005?'0.000':'−'+e.toFixed(3)}`;stepMetric.textContent=String(step).padStart(4,'0');coach.classList.toggle('success',e<.035);if(e<.035&&!recording&&!anim)coachText.textContent='Target reached: error is below 0.035. Now move the target, record your own trajectory, and compare it with the scripted policy.'}
   function line(a,b,w,color){ctx.strokeStyle=color;ctx.lineWidth=w;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}
   function grid(){ctx.strokeStyle='rgba(181,211,216,.075)';ctx.lineWidth=1;for(let x=0;x<W;x+=36){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H*.68);ctx.stroke()}for(let y=0;y<H*.68;y+=36){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}}
   function draw(){if(!W)return;ctx.clearRect(0,0,W,H);grid();const k=kin(),t=targetPx();ctx.fillStyle='#0f191d';ctx.fillRect(0,H*.68,W,H*.32);ctx.fillStyle='#26363b';ctx.fillRect(0,H*.68-4,W,4);
@@ -258,15 +261,17 @@ python -c "import mujoco; print(mujoco.__version__)"</pre>
     [k.base,k.p1].forEach((p,i)=>{ctx.fillStyle=i?'#e65f31':'#93a9ad';ctx.beginPath();ctx.arc(p.x,p.y,i?13:17,0,Math.PI*2);ctx.fill();ctx.fillStyle='#17252a';ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill()});
     const ang=deg(+q0.value + +q1.value),open=7+(100-(+q2.value))*0.07;ctx.save();ctx.translate(k.p2.x,k.p2.y);ctx.rotate(ang);ctx.fillStyle='#bfe4d1';ctx.fillRect(-8,-7,18,14);line({x:8,y:-3},{x:22,y:-open},4,'#bfe4d1');line({x:8,y:3},{x:22,y:open},4,'#bfe4d1');ctx.restore();
     ctx.strokeStyle='rgba(191,228,209,.35)';ctx.setLineDash([5,6]);ctx.beginPath();ctx.moveTo(k.p2.x,k.p2.y);ctx.lineTo(t.x,t.y);ctx.stroke();ctx.setLineDash([]);stats()}
-  function capture(force=false){if(!recording&&!force)return;const now=performance.now();if(!force&&now-lastCapture<90)return;lastCapture=now;episode.push({q0:+q0.value,q1:+q1.value,q2:+q2.value,target:{...target}});if(episode.length>90)episode.shift();renderBuffer()}
-  function renderBuffer(){frameCount.textContent=`${episode.length} frame${episode.length===1?'':'s'}`;framesEl.innerHTML='';const n=Math.min(episode.length,42);for(let i=0;i<n;i++){const f=document.createElement('i');f.className='frame '+(i>n-7?'hot':'');framesEl.appendChild(f)}bufferStatus.textContent=recording?'capturing observation + action':episode.length?'episode ready':'waiting for actions'}
-  [q0,q1,q2].forEach(el=>el.addEventListener('input',()=>{cancelAnimation();step++;capture();draw()}));
-  function cancelAnimation(){if(anim){cancelAnimationFrame(anim);anim=null;stateLabel.textContent='READY'}}
-  recordBtn.onclick=()=>{cancelAnimation();recording=!recording;if(recording){episode=[];capture(true);recordBtn.textContent='■ Stop recording';recordBtn.classList.add('primary');stateLabel.textContent='RECORDING'}else{recordBtn.textContent='● Record demo';stateLabel.textContent='READY'}renderBuffer()};
-  document.getElementById('resetBtn').onclick=()=>{cancelAnimation();q0.value=-24;q1.value=72;q2.value=54;target={x:.56,y:.12};step=0;draw()};
-  function animateFrames(list,label){cancelAnimation();if(!list.length){bufferStatus.textContent='record a demo first';return}stateLabel.textContent=label;let i=0,last=0;function tick(ts){if(ts-last>45){const f=list[i++];q0.value=f.q0;q1.value=f.q1;q2.value=f.q2;if(f.target)target={...f.target};step++;draw();last=ts}if(i<list.length)anim=requestAnimationFrame(tick);else{anim=null;stateLabel.textContent='READY'}}anim=requestAnimationFrame(tick)}
-  replayBtn.onclick=()=>animateFrames(episode,'REPLAYING');
-  policyBtn.onclick=()=>{const t=targetPx(),k=kin(),bx=k.base.x,by=k.base.y,L1=k.L1,L2=k.L2,dx=t.x-bx,dy=t.y-by,r=Math.min(Math.hypot(dx,dy),L1+L2-3);let c=(r*r-L1*L1-L2*L2)/(2*L1*L2);c=Math.max(-1,Math.min(1,c));const a1=Math.acos(c),a0=Math.atan2(dy,dx)-Math.atan2(L2*Math.sin(a1),L1+L2*Math.cos(a1));const end0=a0*180/Math.PI,end1=a1*180/Math.PI,start0=+q0.value,start1=+q1.value;const path=[];for(let i=1;i<=50;i++){let u=i/50;u=u*u*(3-2*u);path.push({q0:start0+(end0-start0)*u,q1:start1+(end1-start1)*u,q2:54,target:{...target}})}animateFrames(path,'POLICY')};
+  function capture(force=false){if(!recording&&!force)return;lastCapture=performance.now();episode.push({q0:+q0.value,q1:+q1.value,q2:+q2.value,target:{...target}});if(episode.length>90)episode.shift();renderBuffer()}
+  function setCoach(text,success=false){coachText.textContent=text;coach.classList.toggle('success',success)}
+  function renderBuffer(){frameCount.textContent=`${episode.length} frame${episode.length===1?'':'s'}`;framesEl.innerHTML='';const n=Math.min(episode.length,42);for(let i=0;i<n;i++){const f=document.createElement('i');f.className='frame '+(i>n-7?'hot':'');framesEl.appendChild(f)}bufferStatus.textContent=recording?'capturing · move a joint or target':episode.length?'episode ready · replay enabled':'empty · press Record demo';replayBtn.disabled=!episode.length||recording}
+  function stopRecording(){if(!recording)return;recording=false;recordBtn.textContent='● Record demo';stateLabel.textContent='READY';setCoach(episode.length>1?`Episode saved with ${episode.length} frames. Replay it to see that the same recorded states reproduce the trajectory.`:'Only the initial frame was saved. Record again and move a joint or the target.');renderBuffer()}
+  [q0,q1,q2].forEach(el=>el.addEventListener('input',()=>{cancelAnimation();step++;capture();setCoach(recording?'Recording: each sampled frame stores the joint observation, target, and action.':'Manual joint command applied. Watch target error and reward change together.');draw()}));
+  function cancelAnimation(){if(anim){cancelAnimationFrame(anim);anim=null}stateLabel.textContent=recording?'RECORDING':'READY';policyBtn.disabled=false;renderBuffer()}
+  recordBtn.onclick=()=>{cancelAnimation();if(recording){capture(true);stopRecording();return}episode=[];recording=true;lastCapture=0;capture(true);recordBtn.textContent='■ Stop & save';stateLabel.textContent='RECORDING';setCoach('Recording started. Move a joint slider or drag the target; the episode buffer will fill with sampled frames.');renderBuffer()};
+  document.getElementById('resetBtn').onclick=()=>{cancelAnimation();stopRecording();q0.value=-24;q1.value=72;q2.value=54;target={x:.56,y:.12};step=0;setCoach('Reset restores the initial robot pose and target. Your saved episode stays available for replay.');draw()};
+  function animateFrames(list,label,onDone){cancelAnimation();stopRecording();if(!list.length){setCoach('No episode to replay yet. Press Record demo, move the robot, then stop and save.');return}stateLabel.textContent=label;replayBtn.disabled=true;policyBtn.disabled=true;let i=0,last=0;function tick(ts){if(ts-last>45){const f=list[i++];q0.value=f.q0;q1.value=f.q1;q2.value=f.q2;if(f.target)target={...f.target};step++;draw();last=ts}if(i<list.length)anim=requestAnimationFrame(tick);else{anim=null;stateLabel.textContent='READY';policyBtn.disabled=false;renderBuffer();if(onDone)onDone();draw()}}anim=requestAnimationFrame(tick)}
+  replayBtn.onclick=()=>{setCoach('Replaying stored joint states and target positions in order. This is deterministic playback—not a learned policy.');animateFrames(episode,'REPLAYING',()=>setCoach('Replay complete. The trajectory came from stored frames; no physics or inference was recomputed.'))};
+  policyBtn.onclick=()=>{const t=targetPx(),k=kin(),bx=k.base.x,by=k.base.y,L1=k.L1,L2=k.L2,dx=t.x-bx,dy=t.y-by,r=Math.min(Math.hypot(dx,dy),L1+L2-3);let c=(r*r-L1*L1-L2*L2)/(2*L1*L2);c=Math.max(-1,Math.min(1,c));const a1=Math.acos(c),a0=Math.atan2(dy,dx)-Math.atan2(L2*Math.sin(a1),L1+L2*Math.cos(a1));const end0=Math.max(-85,Math.min(80,a0*180/Math.PI)),end1=Math.max(-130,Math.min(130,a1*180/Math.PI)),start0=+q0.value,start1=+q1.value;const path=[];for(let i=1;i<=50;i++){let u=i/50;u=u*u*(3-2*u);path.push({q0:start0+(end0-start0)*u,q1:start1+(end1-start1)*u,q2:54,target:{...target}})}setCoach('Scripted policy running: inverse kinematics computes a joint goal, then interpolates 50 actions toward it.');animateFrames(path,'POLICY',()=>{const ee=worldEE(),e=Math.hypot(ee.x-target.x,ee.y-target.y);setCoach(e<.035?'Policy complete: target reached below the 0.035 success threshold.':'Policy stopped at the joint or reach limit. Move the target closer and compare again.',e<.035)})};
   function pointer(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
   canvas.addEventListener('pointerdown',e=>{const p=pointer(e),t=targetPx();if(Math.hypot(p.x-t.x,p.y-t.y)<45){dragging=true;canvas.setPointerCapture(e.pointerId)}});
   canvas.addEventListener('pointermove',e=>{if(!dragging)return;cancelAnimation();const p=pointer(e);target.x=Math.max(.12,Math.min(.77,p.x/W-.14));target.y=Math.max(.03,Math.min(.53,.68-p.y/H));step++;capture();draw()});
