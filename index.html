@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <link rel="icon" href="data:," />
+  <title>LeRobot MuJoCo Playground</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --ink:#172126;--muted:#526168;--faint:#7b898f;--paper:#f4f5f1;--panel:#fff;--line:#d9dedb;
+      --dark:#152126;--dark2:#1e2e34;--orange:#e65f31;--orange2:#ff865d;--mint:#bfe4d1;--blue:#b8d8e8;
+      --shadow:0 16px 42px rgba(24,36,40,.10);--r:18px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:Manrope,system-ui,sans-serif;line-height:1.45;overflow-x:hidden}
+    button,input{font:inherit}
+    button{cursor:pointer}
+    a{color:inherit}
+    .shell{display:grid;grid-template-columns:246px minmax(0,1fr);min-height:100vh}
+    aside{position:sticky;top:0;height:100vh;padding:30px 22px;border-right:1px solid var(--line);background:#eef0ec;display:flex;flex-direction:column;gap:28px}
+    .lab-label{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--orange);font-weight:600;letter-spacing:.08em}
+    aside h2{margin:7px 0 0;font-size:22px;line-height:1.15;letter-spacing:-.03em}
+    .progress-label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px}
+    .progress-track{height:5px;background:#d6dbd7;border-radius:6px;overflow:hidden}.progress-track span{display:block;width:22%;height:100%;background:var(--orange)}
+    nav{display:grid;gap:4px}
+    .nav-item{display:flex;align-items:center;gap:11px;padding:10px 10px;border-radius:9px;color:var(--muted);font-size:13px;text-decoration:none}
+    .nav-item:hover,.nav-item.active{background:#fff;color:var(--ink)}
+    .nav-num{font-family:"IBM Plex Mono",monospace;color:var(--faint);font-size:11px}.nav-item.active .nav-num{color:var(--orange)}
+    .aside-note{margin-top:auto;border-top:1px solid var(--line);padding-top:18px;font-size:12px;color:var(--muted)}
+    .aside-note b{display:block;color:var(--ink);margin-bottom:5px}
+    main{min-width:0;padding:30px clamp(22px,4vw,62px) 80px}
+    .topline{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;gap:20px}
+    .crumb{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
+    .status{font:500 11px "IBM Plex Mono",monospace;display:flex;align-items:center;gap:7px;color:var(--muted)}
+    .dot{width:7px;height:7px;border-radius:50%;background:#38a16a;box-shadow:0 0 0 3px #d9eee2}
+    .intro{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr);gap:46px;align-items:end;margin-bottom:28px}
+    .intro h1{margin:0;font-size:clamp(34px,5vw,68px);line-height:.98;letter-spacing:-.055em;max-width:760px;font-weight:650}
+    .intro p{margin:0;color:var(--muted);font-size:15px;max-width:480px}
+    .intro strong{color:var(--ink)}
+    .workspace{background:var(--dark);border-radius:24px;overflow:hidden;box-shadow:var(--shadow);color:#eef5f4}
+    .workspace-bar{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid #314148;background:#18262b}
+    .window-dots{display:flex;gap:7px}.window-dots i{width:9px;height:9px;border-radius:50%;background:#425158}.window-dots i:first-child{background:var(--orange)}
+    .workspace-title{font:500 11px "IBM Plex Mono",monospace;color:#9eb0b7}
+    .workspace-main{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(260px,.65fr);min-height:490px}
+    .stage{position:relative;min-width:0;overflow:hidden;background:linear-gradient(180deg,#1b2b31 0%,#162328 68%,#101b1f 68%);border-right:1px solid #314148}
+    canvas{display:block;width:100%;height:100%;min-height:490px;touch-action:none}
+    .stage-hint{position:absolute;left:17px;top:16px;color:#a8b7bc;font:11px "IBM Plex Mono",monospace;background:rgba(12,22,26,.68);padding:8px 10px;border:1px solid rgba(255,255,255,.09);border-radius:7px;pointer-events:none}
+    .stage-hint b{color:#fff;font-weight:500}
+    .telemetry{padding:20px 20px 18px;background:#17252a;display:flex;flex-direction:column;gap:16px}
+    .telemetry-head{display:flex;justify-content:space-between;align-items:center}
+    .telemetry h3{margin:0;font-size:14px}.mono{font-family:"IBM Plex Mono",monospace}
+    .sim-state{font:11px "IBM Plex Mono",monospace;color:#9fb0b6}.sim-state b{color:#bfe4d1;font-weight:500}
+    .metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .metric{background:#213238;padding:11px;border-radius:9px}.metric span{display:block;font:10px "IBM Plex Mono",monospace;color:#91a5ac;margin-bottom:4px}.metric b{font:500 15px "IBM Plex Mono",monospace;color:white}
+    .control{display:grid;gap:7px}.control-top{display:flex;justify-content:space-between;font:10px "IBM Plex Mono",monospace;color:#9fb0b6}.control-top output{color:white}
+    input[type="range"]{width:100%;accent-color:var(--orange)}
+    .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto}
+    .btn{border:0;border-radius:9px;padding:11px 13px;font-weight:650;font-size:12px;background:#e8efed;color:#162126;transition:.16s ease}
+    .btn:hover{filter:brightness(1.05)}.btn.primary{background:var(--orange);color:white}.btn.secondary{background:#2a3b41;color:#e9f0ef;border:1px solid #3a4d53}.btn.wide{grid-column:1/-1}
+    .dataset-strip{border-top:1px solid #314148;background:#111d21;padding:13px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px;font:11px "IBM Plex Mono",monospace;color:#92a6ad}
+    .frames{display:flex;gap:4px;min-width:80px;flex:1;max-width:520px}.frame{height:20px;width:8px;border-radius:2px;background:#26383e}.frame.hot{background:var(--orange)}
+    .lesson-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.48fr);gap:24px;margin-top:32px}
+    .section{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:26px}
+    .section h2{font-size:24px;letter-spacing:-.035em;margin:0 0 7px}.section .lead{margin:0 0 22px;color:var(--muted);font-size:14px}
+    .loop{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;align-items:stretch}
+    .loop-step{padding:13px 10px;border-radius:10px;background:#f0f2ef;min-width:0}.loop-step b{font-size:12px;display:block}.loop-step span{display:block;font:10px "IBM Plex Mono",monospace;color:var(--muted);margin-top:5px;word-break:break-word}.loop-step.active{background:var(--orange);color:white}.loop-step.active span{color:#ffe1d6}
+    .lesson-list{display:grid;gap:0}.lesson{display:grid;grid-template-columns:34px 1fr;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}.lesson:last-child{border-bottom:0}.lesson-num{width:26px;height:26px;display:grid;place-items:center;border-radius:50%;background:var(--ink);color:white;font:11px "IBM Plex Mono",monospace}.lesson b{display:block;font-size:13px;margin-bottom:3px}.lesson p{margin:0;font-size:12px;color:var(--muted)}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
+    .stack-card{position:relative;overflow:hidden}.stack-card:before{content:"";position:absolute;width:110px;height:110px;border-radius:50%;right:-38px;top:-43px;background:var(--mint);opacity:.55}.stack-card h3{margin:0 0 4px;font-size:18px}.stack-card p{font-size:13px;color:var(--muted);margin:0 0 18px;max-width:90%}.stack-row{display:grid;grid-template-columns:106px 1fr;gap:12px;padding:11px 0;border-top:1px solid var(--line);font-size:12px}.stack-row b{font-family:"IBM Plex Mono",monospace;font-weight:600}.stack-row span{color:var(--muted)}
+    .code-card{background:#132025;color:#eaf1ef;border-radius:var(--r);overflow:hidden}.code-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #314148;font:11px "IBM Plex Mono",monospace;color:#9eb0b7}.copy{border:1px solid #405359;background:#203137;color:white;border-radius:7px;padding:6px 9px;font:10px "IBM Plex Mono",monospace}.copy.done{border-color:#6fb38c;color:#bfe4d1}.code{margin:0;padding:18px 18px 22px;font:12px/1.7 "IBM Plex Mono",monospace;white-space:pre-wrap;overflow-wrap:anywhere}.code .comment{color:#789098}.code .accent{color:var(--orange2)}
+    .truth{margin-top:24px;padding:22px 24px;border:1px solid #edc6b8;background:#fff9f6;border-radius:14px;display:grid;grid-template-columns:auto 1fr;gap:15px}.truth-icon{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--orange);color:white;font-weight:700}.truth h3{margin:0 0 5px;font-size:15px}.truth p{margin:0;color:var(--muted);font-size:13px}
+    .next{margin-top:24px;background:var(--ink);color:#f4f7f6;border-radius:20px;padding:28px;display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center}.next h2{margin:0 0 7px;font-size:25px}.next p{margin:0;color:#aebcc0;font-size:13px}.next a{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;background:var(--mint);color:#172126;font-weight:700;border-radius:10px;padding:12px 16px;font-size:12px}
+    .toast{position:fixed;right:20px;bottom:20px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow);border-radius:10px;padding:11px 14px;font-size:12px;opacity:0;transform:translateY(8px);pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:none}
+    @media(max-width:960px){.shell{grid-template-columns:1fr}aside{position:static;height:auto;display:block;padding:18px 22px;border-right:0;border-bottom:1px solid var(--line)}aside h2,.progress-label,.progress-track,.aside-note{display:none}nav{display:flex;overflow:visible;gap:6px;margin-top:12px}.nav-item{padding:8px;background:#fff;flex:1;justify-content:center}.nav-item span:last-child{display:none}main{padding-top:22px}.intro{grid-template-columns:1fr;gap:16px}.workspace-main{grid-template-columns:1fr}.stage{border-right:0;border-bottom:1px solid #314148}canvas{min-height:410px}.telemetry{display:grid;grid-template-columns:1fr 1fr;align-items:start}.telemetry-head,.metrics,.actions{grid-column:1/-1}.lesson-grid,.split{grid-template-columns:1fr}.loop{grid-template-columns:repeat(5,minmax(90px,1fr));overflow:hidden}}
+    @media(max-width:620px){main{padding:17px 14px 55px}.topline{margin-bottom:21px}.intro h1{font-size:39px}.intro p{font-size:14px}.workspace{border-radius:16px}.workspace-main{min-height:0}canvas{min-height:350px}.telemetry{grid-template-columns:1fr;padding:16px}.telemetry-head,.metrics,.actions{grid-column:auto}.metrics{grid-template-columns:1fr 1fr}.dataset-strip{align-items:flex-start;flex-direction:column}.frames{width:100%}.lesson-grid{margin-top:18px}.section{padding:20px;border-radius:14px}.loop{display:grid;grid-template-columns:1fr}.loop-step{display:grid;grid-template-columns:80px 1fr;align-items:center}.loop-step span{margin:0}.split{gap:18px}.next{grid-template-columns:1fr}.next a{width:100%}.topline .status{display:none}}
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <div>
+      <div class="lab-label">PHYSICAL AI / LAB 01</div>
+      <h2>See the control loop</h2>
+    </div>
+    <div>
+      <div class="progress-label"><span>Learning path</span><span>1 / 4</span></div>
+      <div class="progress-track"><span></span></div>
+    </div>
+    <nav aria-label="Page sections">
+      <a class="nav-item active" href="#play"><span class="nav-num">01</span><span>Playground</span></a>
+      <a class="nav-item" href="#loop"><span class="nav-num">02</span><span>Control loop</span></a>
+      <a class="nav-item" href="#stack"><span class="nav-num">03</span><span>Stack map</span></a>
+      <a class="nav-item" href="#local"><span class="nav-num">04</span><span>Local setup</span></a>
+    </nav>
+    <div class="aside-note"><b>First milestone</b>One simulated episode you can explain frame by frame: observation → action → next state.</div>
+  </aside>
+
+  <main>
+    <div class="topline">
+      <div class="crumb">LEARNING TRACK / MANIPULATION</div>
+      <div class="status"><span class="dot"></span> browser lab ready</div>
+    </div>
+
+    <section class="intro" id="play">
+      <h1>Make the robot move.<br>Then inspect why.</h1>
+      <p><strong>LeRobot organizes the learning loop. MuJoCo supplies the physics.</strong> This first exercise makes their boundary tangible before we introduce a full model, camera observations, or training.</p>
+    </section>
+
+    <section class="workspace" aria-label="Interactive robot arm learning scene">
+      <div class="workspace-bar">
+        <div class="window-dots"><i></i><i></i><i></i></div>
+        <div class="workspace-title">scene / tabletop_reach</div>
+        <div class="workspace-title">100 Hz model step</div>
+      </div>
+      <div class="workspace-main">
+        <div class="stage">
+          <canvas id="sim" aria-label="Two joint robot arm reaching toward a movable target"></canvas>
+          <div class="stage-hint"><b>Drag the orange target</b> · tune joints · record a demo</div>
+        </div>
+        <div class="telemetry">
+          <div class="telemetry-head"><h3>Observation</h3><span class="sim-state">STATE <b id="stateLabel">READY</b></span></div>
+          <div class="metrics">
+            <div class="metric"><span>END EFFECTOR</span><b id="eeMetric">0.42, 0.18 m</b></div>
+            <div class="metric"><span>TARGET ERROR</span><b id="errorMetric">0.18 m</b></div>
+            <div class="metric"><span>STEP</span><b id="stepMetric">0000</b></div>
+            <div class="metric"><span>REWARD</span><b id="rewardMetric">−0.180</b></div>
+          </div>
+          <label class="control"><span class="control-top"><span>SHOULDER / q₀</span><output id="q0Out">−24°</output></span><input id="q0" aria-label="Shoulder joint" type="range" min="-85" max="80" value="-24"></label>
+          <label class="control"><span class="control-top"><span>ELBOW / q₁</span><output id="q1Out">72°</output></span><input id="q1" aria-label="Elbow joint" type="range" min="-130" max="130" value="72"></label>
+          <label class="control"><span class="control-top"><span>GRIPPER / q₂</span><output id="q2Out">54%</output></span><input id="q2" aria-label="Gripper aperture" type="range" min="0" max="100" value="54"></label>
+          <div class="actions">
+            <button class="btn primary" id="recordBtn">● Record demo</button>
+            <button class="btn secondary" id="resetBtn">Reset</button>
+            <button class="btn wide" id="policyBtn">Run scripted reach policy</button>
+            <button class="btn secondary wide" id="replayBtn">Replay recorded demo</button>
+          </div>
+        </div>
+      </div>
+      <div class="dataset-strip">
+        <span>EPISODE BUFFER · <b id="frameCount">0 frames</b></span>
+        <div class="frames" id="frames" aria-hidden="true"></div>
+        <span id="bufferStatus">waiting for actions</span>
+      </div>
+    </section>
+
+    <div class="lesson-grid" id="loop">
+      <section class="section">
+        <h2>The loop, without the fog</h2>
+        <p class="lead">This playground uses a five-part abstraction for the learning loop.</p>
+        <div class="loop">
+          <div class="loop-step"><b>Observe</b><span>q, camera</span></div>
+          <div class="loop-step"><b>Policy</b><span>π(o) → a</span></div>
+          <div class="loop-step active"><b>Act</b><span>joint target</span></div>
+          <div class="loop-step"><b>Step</b><span>physics Δt</span></div>
+          <div class="loop-step"><b>Record</b><span>o, a, r</span></div>
+        </div>
+        <div class="truth">
+          <div class="truth-icon">i</div>
+          <div><h3>Illustrative kinematic model — not MuJoCo.</h3></div>
+        </div>
+      </section>
+      <section class="section">
+        <h2>Your 10-minute drill</h2>
+        <p class="lead">Do these in order. The point is to notice the data, not win a game.</p>
+        <div class="lesson-list">
+          <div class="lesson"><span class="lesson-num">1</span><div><b>Move the target</b><p>Drag the orange puck and watch target error change.</p></div></div>
+          <div class="lesson"><span class="lesson-num">2</span><div><b>Teleoperate</b><p>Use shoulder and elbow to bring the gripper closer.</p></div></div>
+          <div class="lesson"><span class="lesson-num">3</span><div><b>Record an episode</b><p>Capture observation–action pairs while you move.</p></div></div>
+          <div class="lesson"><span class="lesson-num">4</span><div><b>Replay it</b><p>The same actions reproduce the trajectory.</p></div></div>
+          <div class="lesson"><span class="lesson-num">5</span><div><b>Run the baseline</b><p>Compare your demo with a scripted inverse-kinematics policy.</p></div></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="split" id="stack">
+      <section class="section stack-card">
+        <h3>Who owns what?</h3>
+        <p>These projects complement each other; they are not substitutes.</p>
+        <div class="stack-row"><b>MuJoCo</b><span>Loads the robot and world, resolves dynamics and contacts, advances the state.</span></div>
+        <div class="stack-row"><b>LeRobot</b><span>Represents datasets, policies, training runs, teleoperation and evaluation.</span></div>
+        <div class="stack-row"><b>Your env</b><span>Translates MuJoCo state into LeRobot observations and actions into actuator commands.</span></div>
+        <div class="stack-row"><b>ROS 2 later</b><span>Connects the trained behavior to real cameras, motors, safety and system telemetry.</span></div>
+      </section>
+      <section class="section stack-card">
+        <h3>The first real repo</h3>
+        <p>Keep the scope deliberately small: one scene, one task, one measurable success condition.</p>
+        <div class="stack-row"><b>scene.xml</b><span>2-link arm, table, target and actuator definitions.</span></div>
+        <div class="stack-row"><b>env.py</b><span>reset(), step(), observation and reward.</span></div>
+        <div class="stack-row"><b>record.py</b><span>Keyboard teleop into a LeRobot-compatible episode.</span></div>
+        <div class="stack-row"><b>evaluate.py</b><span>20 target positions; reach rate, error and step count.</span></div>
+      </section>
+    </div>
+
+    <section class="split" id="local">
+      <div class="code-card">
+        <div class="code-head"><span>01 · CREATE THE ENVIRONMENT</span><button class="copy" data-copy="setupCode">Copy</button></div>
+        <pre class="code" id="setupCode"><span class="comment"># Linux / macOS</span>
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install <span class="accent">mujoco lerobot</span>
+
+python -c "import mujoco; print(mujoco.__version__)"</pre>
+      </div>
+      <div class="code-card">
+        <div class="code-head"><span>02 · PROJECT SHAPE</span><button class="copy" data-copy="treeCode">Copy</button></div>
+        <pre class="code" id="treeCode">lerobot-mujoco-lab/
+├── README.md
+├── pyproject.toml
+├── assets/
+│   └── tabletop_reach.xml
+├── src/
+│   ├── env.py
+│   ├── teleop.py
+│   └── record_episode.py
+└── tests/
+    ├── test_reset.py
+    └── test_observation.py</pre>
+      </div>
+    </section>
+
+    <section class="next">
+      <div><h2>Next build: the real MuJoCo reach environment</h2><p>We should implement the MJCF scene, connect it to a Gym-style environment, record a LeRobot-format episode, and add a reproducible evaluation—not jump to a neural policy yet.</p></div>
+      <a href="https://github.com/huggingface/lerobot" target="_blank" rel="noopener noreferrer">Open LeRobot source ↗</a>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite">Copied</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('sim');
+  const ctx = canvas.getContext('2d');
+  const q0 = document.getElementById('q0'), q1 = document.getElementById('q1'), q2 = document.getElementById('q2');
+  const q0Out = document.getElementById('q0Out'), q1Out = document.getElementById('q1Out'), q2Out = document.getElementById('q2Out');
+  const eeMetric = document.getElementById('eeMetric'), errorMetric = document.getElementById('errorMetric'), rewardMetric = document.getElementById('rewardMetric'), stepMetric = document.getElementById('stepMetric');
+  const stateLabel = document.getElementById('stateLabel'), recordBtn = document.getElementById('recordBtn'), replayBtn = document.getElementById('replayBtn'), policyBtn = document.getElementById('policyBtn');
+  const frameCount = document.getElementById('frameCount'), framesEl = document.getElementById('frames'), bufferStatus = document.getElementById('bufferStatus');
+  let W=0,H=0,dpr=1,step=0,recording=false,episode=[],anim=null,dragging=false,lastCapture=0;
+  let target={x:.56,y:.12};
+  const deg=x=>x*Math.PI/180;
+  function dims(){const r=canvas.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,2);W=r.width;H=r.height;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw()}
+  function kin(a0=+q0.value,a1=+q1.value){const base={x:W*.28,y:H*.68}, L1=Math.min(W*.27,155),L2=Math.min(W*.24,136);const t0=deg(a0),t1=deg(a0+a1);const p1={x:base.x+Math.cos(t0)*L1,y:base.y+Math.sin(t0)*L1};const p2={x:p1.x+Math.cos(t1)*L2,y:p1.y+Math.sin(t1)*L2};return{base,p1,p2,L1,L2}}
+  function targetPx(){return{x:W*(.14+target.x),y:H*(.68-target.y)}}
+  function worldEE(){const k=kin();return{x:(k.p2.x-W*.14)/W,y:(H*.68-k.p2.y)/H}}
+  function stats(){const ee=worldEE(),dx=ee.x-target.x,dy=ee.y-target.y,e=Math.hypot(dx,dy);q0Out.value=`${+q0.value<0?'−':''}${Math.abs(+q0.value)}°`;q1Out.value=`${+q1.value<0?'−':''}${Math.abs(+q1.value)}°`;q2Out.value=`${q2.value}%`;eeMetric.textContent=`${ee.x.toFixed(2)}, ${ee.y.toFixed(2)} m`;errorMetric.textContent=`${e.toFixed(3)} m`;rewardMetric.textContent=`${e===0?'0.000':'−'+e.toFixed(3)}`;stepMetric.textContent=String(step).padStart(4,'0')}
+  function line(a,b,w,color){ctx.strokeStyle=color;ctx.lineWidth=w;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}
+  function grid(){ctx.strokeStyle='rgba(181,211,216,.075)';ctx.lineWidth=1;for(let x=0;x<W;x+=36){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H*.68);ctx.stroke()}for(let y=0;y<H*.68;y+=36){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}}
+  function draw(){if(!W)return;ctx.clearRect(0,0,W,H);grid();const k=kin(),t=targetPx();ctx.fillStyle='#0f191d';ctx.fillRect(0,H*.68,W,H*.32);ctx.fillStyle='#26363b';ctx.fillRect(0,H*.68-4,W,4);
+    ctx.fillStyle='rgba(230,95,49,.14)';ctx.beginPath();ctx.arc(t.x,t.y,28,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#e65f31';ctx.lineWidth=2;ctx.beginPath();ctx.arc(t.x,t.y,11,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#ff865d';ctx.beginPath();ctx.arc(t.x,t.y,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#2a3a40';ctx.fillRect(k.base.x-40,k.base.y,80,22);ctx.fillStyle='#405259';ctx.fillRect(k.base.x-26,k.base.y-8,52,10);line(k.base,k.p1,20,'#c7d3d1');line(k.p1,k.p2,16,'#e3ebe9');
+    [k.base,k.p1].forEach((p,i)=>{ctx.fillStyle=i?'#e65f31':'#93a9ad';ctx.beginPath();ctx.arc(p.x,p.y,i?13:17,0,Math.PI*2);ctx.fill();ctx.fillStyle='#17252a';ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill()});
+    const ang=deg(+q0.value + +q1.value),open=7+(100-(+q2.value))*0.07;ctx.save();ctx.translate(k.p2.x,k.p2.y);ctx.rotate(ang);ctx.fillStyle='#bfe4d1';ctx.fillRect(-8,-7,18,14);line({x:8,y:-3},{x:22,y:-open},4,'#bfe4d1');line({x:8,y:3},{x:22,y:open},4,'#bfe4d1');ctx.restore();
+    ctx.strokeStyle='rgba(191,228,209,.35)';ctx.setLineDash([5,6]);ctx.beginPath();ctx.moveTo(k.p2.x,k.p2.y);ctx.lineTo(t.x,t.y);ctx.stroke();ctx.setLineDash([]);stats()}
+  function capture(force=false){if(!recording&&!force)return;const now=performance.now();if(!force&&now-lastCapture<90)return;lastCapture=now;episode.push({q0:+q0.value,q1:+q1.value,q2:+q2.value,target:{...target}});if(episode.length>90)episode.shift();renderBuffer()}
+  function renderBuffer(){frameCount.textContent=`${episode.length} frame${episode.length===1?'':'s'}`;framesEl.innerHTML='';const n=Math.min(episode.length,42);for(let i=0;i<n;i++){const f=document.createElement('i');f.className='frame '+(i>n-7?'hot':'');framesEl.appendChild(f)}bufferStatus.textContent=recording?'capturing observation + action':episode.length?'episode ready':'waiting for actions'}
+  [q0,q1,q2].forEach(el=>el.addEventListener('input',()=>{cancelAnimation();step++;capture();draw()}));
+  function cancelAnimation(){if(anim){cancelAnimationFrame(anim);anim=null;stateLabel.textContent='READY'}}
+  recordBtn.onclick=()=>{cancelAnimation();recording=!recording;if(recording){episode=[];capture(true);recordBtn.textContent='■ Stop recording';recordBtn.classList.add('primary');stateLabel.textContent='RECORDING'}else{recordBtn.textContent='● Record demo';stateLabel.textContent='READY'}renderBuffer()};
+  document.getElementById('resetBtn').onclick=()=>{cancelAnimation();q0.value=-24;q1.value=72;q2.value=54;target={x:.56,y:.12};step=0;draw()};
+  function animateFrames(list,label){cancelAnimation();if(!list.length){bufferStatus.textContent='record a demo first';return}stateLabel.textContent=label;let i=0,last=0;function tick(ts){if(ts-last>45){const f=list[i++];q0.value=f.q0;q1.value=f.q1;q2.value=f.q2;if(f.target)target={...f.target};step++;draw();last=ts}if(i<list.length)anim=requestAnimationFrame(tick);else{anim=null;stateLabel.textContent='READY'}}anim=requestAnimationFrame(tick)}
+  replayBtn.onclick=()=>animateFrames(episode,'REPLAYING');
+  policyBtn.onclick=()=>{const t=targetPx(),k=kin(),bx=k.base.x,by=k.base.y,L1=k.L1,L2=k.L2,dx=t.x-bx,dy=t.y-by,r=Math.min(Math.hypot(dx,dy),L1+L2-3);let c=(r*r-L1*L1-L2*L2)/(2*L1*L2);c=Math.max(-1,Math.min(1,c));const a1=Math.acos(c),a0=Math.atan2(dy,dx)-Math.atan2(L2*Math.sin(a1),L1+L2*Math.cos(a1));const end0=a0*180/Math.PI,end1=a1*180/Math.PI,start0=+q0.value,start1=+q1.value;const path=[];for(let i=1;i<=50;i++){let u=i/50;u=u*u*(3-2*u);path.push({q0:start0+(end0-start0)*u,q1:start1+(end1-start1)*u,q2:54,target:{...target}})}animateFrames(path,'POLICY')};
+  function pointer(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
+  canvas.addEventListener('pointerdown',e=>{const p=pointer(e),t=targetPx();if(Math.hypot(p.x-t.x,p.y-t.y)<45){dragging=true;canvas.setPointerCapture(e.pointerId)}});
+  canvas.addEventListener('pointermove',e=>{if(!dragging)return;cancelAnimation();const p=pointer(e);target.x=Math.max(.12,Math.min(.77,p.x/W-.14));target.y=Math.max(.03,Math.min(.53,.68-p.y/H));step++;capture();draw()});
+  canvas.addEventListener('pointerup',()=>dragging=false);canvas.addEventListener('pointercancel',()=>dragging=false);
+  document.querySelectorAll('.copy').forEach(btn=>btn.addEventListener('click',async()=>{const node=document.getElementById(btn.dataset.copy);try{await navigator.clipboard.writeText(node.innerText);btn.textContent='Copied';btn.classList.add('done');const toast=document.getElementById('toast');toast.classList.add('show');setTimeout(()=>{toast.classList.remove('show');btn.textContent='Copy';btn.classList.remove('done')},1400)}catch{btn.textContent='Select manually'}}));
+  window.addEventListener('resize',dims);renderBuffer();dims();
+})();
+</script>
+</body>
+</html>
